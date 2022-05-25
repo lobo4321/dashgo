@@ -12,13 +12,44 @@ import {
   Tbody,
   Td,
   Text,
+  useBreakpointValue,
+  Spinner,
+  Link,
 } from "@chakra-ui/react";
 import { RiAddLine, RiPencilLine } from "react-icons/ri";
 import { Header } from "../../components/Header";
-import { Pagination } from "../../components/pagination";
+import { Pagination } from "../../components/Pagination";
 import { Sidebar } from "../../components/Sidebar";
+import NextLink from "next/link";
+import { useState } from "react";
+import { getUsers, useUsers } from "../../services/hooks/useUsers";
+import { queryClient } from "../../services/queryClient";
+import { api } from "../../services/api";
+import { GetServerSideProps } from "next";
 
 export default function UserList() {
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isFetching, error } = useUsers(page);
+
+  const isWideVersion = useBreakpointValue({
+    base: false,
+    lg: true,
+  });
+
+  async function handlePrefetchUser(userId: string) {
+    await queryClient.prefetchQuery(
+      ["user", userId],
+      async () => {
+        const reponse = await api.get(`users/${userId}`);
+
+        return reponse.data;
+      },
+      {
+        staleTime: 1000 * 60 * 10, //10 min
+      }
+    );
+  }
+
   return (
     <Box>
       <Header />
@@ -30,109 +61,92 @@ export default function UserList() {
           <Flex mb="8" justifyContent="space-between" alignItems="center">
             <Heading size="lg" fontWeight="normal">
               Usuários
+              {!isLoading && isFetching && (
+                <Spinner color="gray.500" size="sm" ml="4" />
+              )}
             </Heading>
-            <Button
-              as="a"
-              size="sm"
-              fontSize="sm"
-              colorScheme="pink"
-              leftIcon={<Icon as={RiAddLine} fontSize="20" />}
-            >
-              Criar Novo
-            </Button>
+            <NextLink href="/users/create" passHref>
+              <Button
+                as="a"
+                size="sm"
+                fontSize="sm"
+                colorScheme="pink"
+                leftIcon={<Icon as={RiAddLine} fontSize="20" />}
+              >
+                Criar Novo
+              </Button>
+            </NextLink>
           </Flex>
+          {isLoading ? (
+            <Flex justifyContent="center">
+              <Spinner />
+            </Flex>
+          ) : error ? (
+            <Flex justifyContent="center">
+              <Text>Falha ao obter dados dos usuários.</Text>
+            </Flex>
+          ) : (
+            <>
+              <Table colorScheme="whiteAlpha">
+                <Thead>
+                  <Tr>
+                    <Th px={["4", "4", "6"]} color="gray.300" width="8">
+                      <Checkbox colorScheme="pink" />
+                    </Th>
+                    <Th>Usuários</Th>
+                    {isWideVersion && <Th>Data de cadastro</Th>}
+                    {isWideVersion && <Th width="8"></Th>}
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {data.users.map((user) => {
+                    return (
+                      <Tr key={user.id}>
+                        <Td px={["4", "4", "6"]}>
+                          <Checkbox colorScheme="pink" />
+                        </Td>
+                        <Td>
+                          <Box>
+                            <Link
+                              color="purple.400"
+                              onMouseEnter={() => handlePrefetchUser(user.id)}
+                            >
+                              <Text fontWeight="bold">{user.name}</Text>
+                            </Link>
+                            <Text fontSize="sm" color="gray.300">
+                              {user.email}
+                            </Text>
+                          </Box>
+                        </Td>
+                        {isWideVersion && <Td>{user.createdAt}</Td>}
+                        {isWideVersion && (
+                          <Td>
+                            <Button
+                              as="a"
+                              size="sm"
+                              fontSize="sm"
+                              colorScheme="purple"
+                              leftIcon={
+                                <Icon as={RiPencilLine} fontSize="16" />
+                              }
+                            >
+                              Editar
+                            </Button>
+                          </Td>
+                        )}
+                      </Tr>
+                    );
+                  })}
+                </Tbody>
+              </Table>
 
-          <Table colorScheme="whiteAlpha">
-            <Thead>
-              <Tr>
-                <Th px="6" color="gray.300" width="8">
-                  <Checkbox colorScheme="pink" />
-                </Th>
-                <Th>Usuários</Th>
-                <Th>Data de cadastro</Th>
-                <Th width="8"></Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              <Tr>
-                <Td px="6">
-                  <Checkbox colorScheme="pink" />
-                </Td>
-                <Td>
-                  <Box>
-                    <Text fontWeight="bold">Joao Lobo</Text>
-                    <Text fontSize="sm" color="gray.300">
-                      jglobo47@gmail.com
-                    </Text>
-                  </Box>
-                </Td>
-                <Td>04 de Abril, 2021</Td>
-                <Td>
-                  <Button
-                    as="a"
-                    size="sm"
-                    fontSize="sm"
-                    colorScheme="purple"
-                    leftIcon={<Icon as={RiPencilLine} fontSize="16" />}
-                  >
-                    Editar
-                  </Button>
-                </Td>
-              </Tr>
-              <Tr>
-                <Td px="6">
-                  <Checkbox colorScheme="pink" />
-                </Td>
-                <Td>
-                  <Box>
-                    <Text fontWeight="bold">Joao Lobo</Text>
-                    <Text fontSize="sm" color="gray.300">
-                      jglobo47@gmail.com
-                    </Text>
-                  </Box>
-                </Td>
-                <Td>04 de Abril, 2021</Td>
-                <Td>
-                  <Button
-                    as="a"
-                    size="sm"
-                    fontSize="sm"
-                    colorScheme="purple"
-                    leftIcon={<Icon as={RiPencilLine} fontSize="16" />}
-                  >
-                    Editar
-                  </Button>
-                </Td>
-              </Tr>
-              <Tr>
-                <Td px="6">
-                  <Checkbox colorScheme="pink" />
-                </Td>
-                <Td>
-                  <Box>
-                    <Text fontWeight="bold">Joao Lobo</Text>
-                    <Text fontSize="sm" color="gray.300">
-                      jglobo47@gmail.com
-                    </Text>
-                  </Box>
-                </Td>
-                <Td>04 de Abril, 2021</Td>
-                <Td>
-                  <Button
-                    as="a"
-                    size="sm"
-                    fontSize="sm"
-                    colorScheme="purple"
-                    leftIcon={<Icon as={RiPencilLine} fontSize="16" />}
-                  >
-                    Editar
-                  </Button>
-                </Td>
-              </Tr>
-            </Tbody>
-          </Table>
-
-          <Pagination />
+              <Pagination
+                totalCountOfRegisters={data.totalCount}
+                currentPage={page}
+                onPageChange={setPage}
+              />
+            </>
+          )}
         </Box>
       </Flex>
     </Box>
